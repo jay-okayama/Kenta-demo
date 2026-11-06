@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>麺処 けんた 順番待ちデモ</title>
+<meta name="description" content="LINE公式アカウントで順番待ちを受け付けるデモです。お客さまのLINEとお店の受付画面を並べて、受付から呼び出しまでの流れを体験できます。">
+<meta property="og:title" content="麺処 けんた 順番待ちデモ">
+<meta property="og:description" content="LINEで順番待ち。お客さまのLINEとお店の受付画面の動きを体験できるデモです。">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: 紺ののれんを「舞台」にして、お客さまのLINEとお店の受付画面の2台のスマホを並べ、操作が両方に連動する */
+:root{
+  --stage:#18213A; --stage-2:#202B48; --line:#33405F;
+  --ink:#ECE4D6; --ink-dim:#AFA79A; --gold:#DDB66C; --red:#C8352B; --red-dark:#9E2820;
+  --paper:#F4EBDD; --paper-ink:#2B1D15; --paper-dim:#7A6252;
+  --chat:#8EA7CF; --bubble:#FFFFFF; --mine:#8EDC7E; --ok:#2E9B5B; --warn:#E3A33A;
+  --display:"Zen Old Mincho","Hiragino Mincho ProN","Noto Serif JP",serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--stage);color:var(--ink);font-family:var(--body);margin:0;line-height:1.6}
+.wrap{max-width:1120px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:grid;gap:10px;margin-bottom:22px}
+.eyebrow{font-size:13px;letter-spacing:.18em;color:var(--gold)}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(28px,4.6vw,44px);line-height:1.25;margin:0;text-wrap:balance}
+.lead{color:var(--ink-dim);max-width:46em;margin:0}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0 8px}
+button{font-family:inherit;cursor:pointer}
+.btn{border:1.5px solid var(--gold);background:transparent;color:var(--ink);border-radius:999px;padding:9px 18px;font-size:15px;font-weight:700}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.btn:focus-visible,.tap:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.caption{min-height:52px;display:flex;align-items:center;gap:12px;background:var(--stage-2);border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin:10px 0 24px;font-size:15px}
+.caption b{color:var(--gold);white-space:nowrap;font-family:var(--display);font-size:18px}
+.stage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;justify-items:center}
+@media (max-width:820px){.stage{grid-template-columns:minmax(0,1fr)}}
+.dev{width:100%;max-width:370px;display:grid;gap:10px}
+.dev h2{margin:0;font-size:15px;font-weight:700;color:var(--ink-dim);text-align:center;letter-spacing:.06em}
+.phone{background:#0B0F1A;border-radius:44px;padding:11px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.screen{border-radius:34px;overflow:hidden;height:700px;display:flex;flex-direction:column;position:relative}
+
+/* ---- お客さまのLINE ---- */
+.lhead{background:#fff;color:#222;display:flex;align-items:center;gap:10px;padding:22px 14px 10px;font-weight:700;font-size:15px}
+.av{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-family:var(--display);flex:0 0 auto}
+.chat{flex:1;background:var(--chat);overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+.m{max-width:84%;font-size:13.5px;line-height:1.55;color:#1d1d1d}
+.m.me{align-self:flex-end;background:var(--mine);padding:7px 12px;border-radius:16px}
+.m.bot{align-self:flex-start;display:flex;gap:6px}
+.m.bot .av{width:24px;height:24px;font-size:11px}
+.bt{background:var(--bubble);padding:7px 12px;border-radius:16px;white-space:pre-line}
+.push{align-self:center;font-size:10.5px;color:#fff;background:rgba(0,0,0,.28);padding:1px 10px;border-radius:10px}
+.card{background:#fff;border-radius:16px;overflow:hidden;width:220px}
+.card .ch{background:var(--red);color:#fff;font-weight:700;padding:7px 12px;font-size:13px}
+.card.call .ch{background:var(--warn)}
+.card .cb{padding:10px 12px;text-align:center}
+.big{font-family:var(--display);font-weight:900;font-size:44px;line-height:1.05;color:var(--red)}
+.card.call .big{color:#B56A00}
+.sm{font-size:11.5px;color:#7a6458}
+.kv{display:flex;justify-content:space-around;margin-top:6px}.kv b{display:block;font-size:16px;color:#222}
+.note{font-size:11px;color:#7a6458;padding:0 12px 10px;text-align:left;line-height:1.5}
+.cf{display:flex;border-top:1px solid #eee}.cf span{flex:1;text-align:center;padding:7px 0;font-size:12px;font-weight:700;color:var(--red)}
+.cf span+span{border-left:1px solid #eee;color:#999}
+.stamps{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0 4px}
+.st{aspect-ratio:1;border-radius:50%;border:2px dashed #cfc3b6;display:flex;align-items:center;justify-content:center;font-size:10px;color:#b9ab9c}
+.st.on{border:2px solid var(--red);background:var(--red);color:#fff;font-weight:700}
+.st.goal{border-color:var(--warn);color:#B56A00}
+.qr{display:flex;gap:6px;overflow-x:auto;padding:6px 10px;background:var(--chat)}
+.qr button{flex:0 0 auto;background:#fff;border:1.5px solid var(--red);color:var(--red);border-radius:16px;padding:4px 12px;font-size:12.5px;font-weight:700}
+.rm{background:#1d2742;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:auto auto;gap:4px;padding:5px}
+.rm .tap{border:none;border-radius:10px;background:var(--paper);color:var(--paper-ink);font-weight:700;font-size:12.5px;padding:10px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.rm .tap small{font-weight:400;font-size:10px;color:var(--paper-dim)}
+.rm .tap.main{grid-column:1/4;background:var(--red);color:#fff;font-family:var(--display);font-size:20px;padding:12px 0}
+.rm .tap.main small{color:#FBE3C4;font-family:var(--body)}
+.mbar{background:#fff;color:#333;text-align:center;font-size:11.5px;padding:5px 0 14px}
+
+/* ---- お店の受付画面 ---- */
+.shop{background:#F4EFE9;color:#2B211C}
+.shead{background:var(--red);color:#fff;padding:22px 14px 10px}
+.shead b{font-size:15px}.shead small{display:block;font-size:10.5px;opacity:.85}
+.sbody{flex:1;overflow-y:auto;padding-bottom:12px}
+.chips{display:flex;gap:6px;padding:10px 12px 0;flex-wrap:wrap}
+.chip{border:none;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#5A4638}
+.chip.on{background:var(--ok);color:#fff}.chip.store{background:var(--warn);color:#fff}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px}
+.stat{background:#fff;border-radius:10px;padding:7px 10px}.stat p{margin:0;font-size:10.5px;color:#8A7468}.stat b{font-size:22px;font-variant-numeric:tabular-nums}
+.sec{font-size:11.5px;color:#8A7468;font-weight:700;padding:6px 12px 4px}
+.it{background:#fff;border-radius:12px;margin:0 12px 7px;padding:9px 11px;transition:background .3s}
+.it.called{border:2px solid var(--warn);background:#FFF7EA}
+.it.mine{box-shadow:0 0 0 2px var(--gold) inset}
+.row{display:flex;align-items:center;gap:8px}
+.no{font-family:var(--display);font-weight:900;font-size:22px;color:var(--red);min-width:36px;font-variant-numeric:tabular-nums}
+.nm{flex:1;min-width:0}.nm b{font-size:13.5px}.nm p{margin:0;font-size:10.5px;color:#8A7468}
+.tag{font-size:9.5px;padding:1px 5px;border-radius:5px;margin-left:4px;vertical-align:1px}
+.tag.l{background:#E3F6EA;color:#1E7A43}.tag.w{background:#EFE7DF;color:#7A5A44}.tag.y{background:#FFF0C9;color:#8A5A00}
+.rt{font-size:10.5px;color:#8A7468;text-align:right}
+.acts{display:flex;gap:6px;margin-top:7px}
+.a{flex:1;border-radius:8px;padding:8px 0;font-size:12.5px;font-weight:700;border:1.5px solid #D9CBBF;background:#fff;color:#5A4638}
+.a.call{background:var(--red);border-color:var(--red);color:#fff}.a.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.a.s{flex:0 0 auto;padding:8px 10px}
+.empty{margin:0 12px 7px;font-size:12px;color:#8A7468}
+.add{margin:4px 12px 0;background:#fff;border-radius:12px;padding:8px 10px;display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:700;color:#7A5A44}
+.add select{font-size:14px;padding:3px}
+.toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:#2B211C;color:#fff;padding:5px 12px;border-radius:14px;font-size:12px}
+
+.pulse{animation:pulse .9s ease-out}
+.hint{animation:hint 1.4s ease-in-out infinite;position:relative;z-index:1}
+@keyframes hint{0%,100%{box-shadow:0 0 0 0 rgba(221,182,108,.9)}50%{box-shadow:0 0 0 6px rgba(221,182,108,.9)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(221,182,108,.95)}100%{box-shadow:0 0 0 14px rgba(221,182,108,0)}}
+@media (prefers-reduced-motion:reduce){.pulse,.hint{animation:none;outline:3px solid var(--gold);outline-offset:2px}.chat{scroll-behavior:auto}}
+
+.points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:40px}
+@media (max-width:820px){.points{grid-template-columns:minmax(0,1fr)}}
+.pt{border-top:3px solid var(--gold);padding-top:12px}
+.pt h3{font-family:var(--display);font-size:20px;margin:0 0 6px}
+.pt p{margin:0;color:var(--ink-dim);font-size:14.5px}
+.foot{margin-top:28px;font-size:12.5px;color:var(--ink-dim);border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LINE公式アカウント × 順番待ち受付</div>
+    <h1>麺処 けんた の順番待ちを、LINEでスマートに</h1>
+    <p class="lead">お客さまのLINEと、お店の受付画面を並べています。どちらの画面のボタンも実際に押せます。次に押すボタンは金色に光るので、順番にタップしていくだけで、受付から呼び出しまでの流れを体験できます。</p>
+  </header>
+
+  <div class="bar">
+    <button class="btn" id="play">▶ 自動で流す</button>
+    <button class="btn" id="reset">↺ 最初から</button>
+  </div>
+  <div class="caption" id="cap"><b>操作ガイド</b><span id="capText">お客さまのLINEで「順番待ち受付」をタップしてみてください。</span></div>
+
+  <div class="stage">
+    <section class="dev" aria-label="お客さまのLINE">
+      <h2>お客さまのスマホ（LINE）</h2>
+      <div class="phone"><div class="screen">
+        <div class="lhead">‹ <span class="av">け</span>麺処 けんた</div>
+        <div class="chat" id="chat"></div>
+        <div class="qr" id="qr" hidden></div>
+        <div class="rm">
+          <button class="tap main" id="rmQueue">順番待ち受付<small>並ばずに、待てる。</small></button>
+          <button class="tap" id="rmStatus">今何番目？<small>待ち状況を確認</small></button>
+          <button class="tap" id="rmMenu">メニュー<small>待ち時間に選べます</small></button>
+          <button class="tap" id="rmCard">スタンプカード<small>10個でらーめん</small></button>
+        </div>
+        <div class="mbar">メニュー ▾</div>
+      </div></div>
+    </section>
+
+    <section class="dev" aria-label="お店の受付画面">
+      <h2>お店のスマホ（受付画面）</h2>
+      <div class="phone"><div class="screen shop">
+        <div class="shead"><b>麺処 けんた 受付管理</b><small>スタッフ用の画面です</small></div>
+        <div class="sbody" id="sbody"></div>
+        <div class="toast" id="toast" hidden></div>
+      </div></div>
+    </section>
+  </div>
+
+  <div class="points">
+    <div class="pt"><h3>お客さまは外で待てる</h3><p>番号はLINEに届き、順番が近づくと自動でお知らせ。店先の行列や、寒い日の外待ちがなくなります。</p></div>
+    <div class="pt"><h3>呼び出しはボタン1つ</h3><p>受付画面は店主のスマホで使えます。タブレットや専用機器は不要で、名前を呼びに外へ出る手間もありません。</p></div>
+    <div class="pt"><h3>待つたびに友だちが増える</h3><p>受付にはLINEの友だち登録が必要なので、自然と常連さんにつながります。限定麺の告知や雨の日クーポンもそのまま届けられます。</p></div>
+  </div>
+  <p class="foot">※デモ画面です。表示している番号・お名前・待ち時間はすべて例です。待ち時間の目安は「1組あたり7分」で計算しています。呼び出しなどの通知はLINEの月間メッセージ通数にカウントされます（「今何番目？」への返信はカウントされません）。</p>
+</div>
+
+<script>
+(function(){
+  const MIN=7, $=id=>document.getElementById(id);
+  let S, timers=[], playing=false;
+
+  function init(){
+    S={next:12,mode:'anywhere',open:true,me:null,state:null,flow:'start',
+       called:[{no:8,name:'鈴木',people:2,type:'LINE',sec:95}],
+       waiting:[{no:9,name:'店頭受付',people:2,type:'手動'},{no:10,name:'佐藤',people:1,type:'LINE'},{no:11,name:'店頭受付',people:3,type:'手動'}],
+       stamps:3};
+    $('chat').innerHTML=''; setQR(null);
+    bot('友だち追加ありがとうございます🍜\n麺処 けんたです。\n下のメニューの「順番待ち受付」から、お店の外で待てる順番待ちができます。');
+    renderShop(); caption('お客さまのLINEで「順番待ち受付」をタップしてみてください。');
+  }
+
+  // ---------- LINE側の表示 ----------
+  function add(html,cls){const d=document.createElement('div');d.className=cls;d.innerHTML=html;$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;return d;}
+  function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+  function me(t){add(esc(t),'m me');}
+  function bot(t){add('<span class="av">け</span><div class="bt">'+esc(t)+'</div>','m bot');}
+  function botHtml(h){add('<span class="av">け</span>'+h,'m bot');}
+  function pushLabel(){add('プッシュ通知','push');}
+  function setQR(items){const q=$('qr');q.innerHTML='';if(!items){q.hidden=true;return;}
+    items.forEach(([label,fn])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>{setQR(null);fn();};q.appendChild(b);});q.hidden=false;updateHint();}
+  const est=a=>Math.max(5,a*MIN);
+  const myIndex=()=>S.waiting.findIndex(w=>w.mine);
+
+  function receipt(no,people,ahead){
+    return '<div class="card"><div class="ch">受付が完了しました</div><div class="cb"><div class="sm">あなたの番号</div><div class="big">'+no+'</div><div class="sm">'+people+'名さま</div>'+
+      '<div class="kv"><div><span class="sm">前に</span><b>'+ahead+'組</b></div><div><span class="sm">目安</span><b>'+(ahead?'約'+est(ahead)+'分':'まもなく')+'</b></div></div></div>'+
+      '<div class="note">順番が近づいたらLINEでお知らせします。お店の近くでお待ちください。</div><div class="cf"><span>今何番目？</span><span>キャンセル</span></div></div>';
+  }
+  function callCard(no,people){
+    return '<div class="card call"><div class="ch">🔔 お呼びしています</div><div class="cb"><div class="big">'+no+'</div><div class="sm">'+people+'名さま</div></div>'+
+      '<div class="note">店頭のスタッフにこの画面をお見せください。10分以上お越しがない場合は、次の方をご案内します。</div></div>';
+  }
+
+  function tapQueue(){
+    me('順番待ち受付');
+    if(S.me){statusReply();return;}
+    if(!S.open){bot('ただいま順番待ちの受付を停止しています🙏');return;}
+    if(S.mode==='store'){
+      bot('ただいま店頭でのみ受付しています。\nお店の近くにいることを確認するため、下のボタンから現在地を送ってください📍');
+      setQR([['📍 現在地を送る',()=>{me('📍 位置情報');bot('確認できました👍');askPeople();}]]);
+      caption('「店頭のみ」モードでは、現在地でお店の近くにいるかを確認してから受付します。');
+      return;
+    }
+    askPeople();
+  }
+  function askPeople(){
+    bot('ご来店ありがとうございます🍜\n何名さまですか？');
+    setQR([['1名',()=>reg(1)],['2名',()=>reg(2)],['3名',()=>reg(3)],['4名',()=>reg(4)],['5名以上',()=>{me('5名以上');bot('何名さまですか？\nボタンから選ぶか、人数を数字で送ってください');setQR([5,6,7,8,9,10].map(n=>[n+'名',()=>reg(n)]));}]]);
+    caption('人数はボタンを押すだけ。文字を打つ必要はありません。');
+  }
+  function reg(people){
+    me(people+'名');
+    const no=S.next++; S.waiting.push({no,name:'あなた',people,type:'LINE',mine:true,soon:false}); S.me=no;
+    const ahead=myIndex(); if(ahead<=1)S.waiting[ahead].soon=true;
+    botHtml(receipt(no,people,ahead));
+    renderShop(); flash('it'+no);
+    caption('受付完了。お店の受付画面に「'+no+'番 あなた」が追加されました。お店側で順番に「呼び出す」を押してみてください。');
+  }
+  function statusReply(){
+    if(!S.me){bot('現在、受付中の順番はありません。\n「順番待ち受付」からどうぞ🍜');return;}
+    const c=S.called.find(x=>x.mine);
+    if(c){bot('🔔 '+c.no+'番さま、ただいまお呼びしています！\n店頭のスタッフにお声がけください。');return;}
+    const i=myIndex();
+    if(i<0){bot('ご来店ありがとうございました🍜');return;}
+    bot(i===0?S.me+'番さま、次にご案内です。\nお店の前でお待ちください🍜':S.me+'番さま、あと'+i+'組です。\n目安は約'+est(i)+'分です⏱');
+  }
+
+  // ---------- お店側 ----------
+  function renderShop(){
+    const w=S.waiting, n=w[0];
+    let h='<div class="chips"><button class="chip '+(S.open?'on':'')+'" id="cOpen">'+(S.open?'● 受付中':'■ 受付停止中')+'</button>'+
+      '<button class="chip '+(S.mode==='store'?'store':'')+'" id="cMode">'+(S.mode==='store'?'📍 店頭のみ':'🏠 どこからでも')+'</button></div>'+
+      '<div class="stats"><div class="stat"><p>待ち</p><b>'+w.length+'</b> 組</div><div class="stat"><p>待ち時間の目安</p><b>'+(w.length?est(w.length):0)+'</b> 分</div></div>';
+    h+='<div class="sec">呼び出し中</div>';
+    h+=S.called.length?S.called.map(c=>'<div class="it called'+(c.mine?' mine':'')+'" id="it'+c.no+'"><div class="row"><div class="no">'+c.no+'</div><div class="nm"><b>'+label(c)+'</b>'+tag(c)+'<p>'+c.people+'名・呼び出し中</p></div></div>'+
+      '<div class="acts"><button class="a ok" data-act="done" data-no="'+c.no+'">案内済み</button><button class="a s" data-act="cancel" data-no="'+c.no+'">キャンセル</button></div></div>').join(''):'<p class="empty">いません</p>';
+    h+='<div class="sec">次のお客さま</div>';
+    h+=n?'<div class="it'+(n.mine?' mine':'')+'" id="it'+n.no+'"><div class="row"><div class="no">'+n.no+'</div><div class="nm"><b>'+label(n)+'</b>'+tag(n)+'<p>'+n.people+'名</p></div></div>'+
+      '<div class="acts"><button class="a call" data-act="call" data-no="'+n.no+'" id="callBtn">呼び出す</button><button class="a s" data-act="cancel" data-no="'+n.no+'">キャンセル</button></div></div>':'<p class="empty">待っている方はいません</p>';
+    h+='<div class="sec">待ちリスト</div>';
+    h+=w.slice(1).length?w.slice(1).map((x,i)=>'<div class="it'+(x.mine?' mine':'')+'" id="it'+x.no+'"><div class="row"><div class="no" style="color:#5A4638;font-size:18px">'+x.no+'</div><div class="nm"><b>'+label(x)+'</b>'+tag(x)+'<p>'+x.people+'名</p></div><div class="rt">あと'+(i+1)+'組'+(x.type==='LINE'&&x.soon?'<br>通知済':'')+'</div></div></div>').join(''):'<p class="empty">なし</p>';
+    h+='<div class="add">＋ LINEなしのお客さま <select id="ppl" aria-label="人数"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>名 <button class="a call" style="flex:0 0 auto;padding:6px 14px" id="addBtn">追加</button></div>';
+    $('sbody').innerHTML=h;
+    $('cOpen').onclick=()=>{S.open=!S.open;renderShop();toast(S.open?'受付を再開しました':'受付を停止しました');};
+    $('cMode').onclick=()=>{S.mode=S.mode==='store'?'anywhere':'store';renderShop();toast(S.mode==='store'?'店頭のみに切り替えました':'どこからでもに切り替えました');
+      caption(S.mode==='store'?'「店頭のみ」では、家からの受付を防ぐため、現在地でお店の近くにいるか確認します。':'「どこからでも」では、家を出る前に受付できます。');};
+    $('addBtn').onclick=()=>{const p=+$('ppl').value;S.waiting.push({no:S.next++,name:'店頭受付',people:p,type:'手動'});notify();renderShop();toast(p+'名を追加しました');};
+    $('sbody').querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>act(b.dataset.act,+b.dataset.no));
+    updateHint();
+  }
+  const label=x=>x.mine?'あなた':(x.type==='LINE'?x.name+' 様':x.name);
+  const tag=x=>(x.mine?'<span class="tag y">デモ</span>':'')+(x.type==='LINE'?'<span class="tag l">LINE</span>':'<span class="tag w">手動</span>');
+
+  function act(a,no){
+    if(a==='call'){
+      const i=S.waiting.findIndex(x=>x.no===no); if(i<0)return;
+      const x=S.waiting.splice(i,1)[0]; S.called.push(x); toast(no+'番を呼び出しました');
+      if(x.mine){pushLabel();botHtml(callCard(x.no,x.people));caption('お店が「呼び出す」を押すと、お客さまのLINEに「お呼びしています」が届きます。来店したら「案内済み」で完了です。');}
+    }else{
+      const i=S.called.findIndex(x=>x.no===no);
+      let x; if(i>=0)x=S.called.splice(i,1)[0]; else {const j=S.waiting.findIndex(y=>y.no===no); if(j>=0)x=S.waiting.splice(j,1)[0];}
+      toast(no+'番：'+(a==='done'?'案内済み':'キャンセル'));
+      if(x&&x.mine){S.me=null; if(a==='done'){S.flow='served';S.stamps=Math.min(10,S.stamps+1);caption('ご案内完了。お会計でスタンプカードにスタンプが1つ増えます。「スタンプカード」もタップしてみてください。');}}
+    }
+    notify(); renderShop();
+  }
+  function notify(){
+    S.waiting.slice(0,2).forEach((x,i)=>{
+      if(x.type!=='LINE'||x.soon)return; x.soon=true;
+      if(x.mine){pushLabel();bot(i===0?'🍜 まもなくです！\n'+x.no+'番さま、次にご案内です。\nお店の前でお待ちください。':'🍜 まもなくです！\n'+x.no+'番さま、あと1組でご案内です。\nそろそろお店の前でお待ちください。');
+        caption('順番が近づくと、お客さまに「まもなくです」が自動で届きます。お店は何もしなくてOKです。');}
+    });
+  }
+
+  // ---------- そのほかのメニュー ----------
+  function tapMenu(){me('メニュー');bot('📖 メニュー\n・醤油らーめん　850円\n・味玉醤油らーめん　950円\n・つけ麺　950円\n・チャーシュー丼　400円\n\n待ち時間に決めておくと、ご案内後すぐに注文できます');caption('待ち時間にメニューを見てもらえるので、席についてからの注文が早くなり、回転率アップにつながります。');}
+  function tapCard(){
+    me('スタンプカード');
+    let st='';for(let i=1;i<=10;i++){st+='<div class="st'+(i<=S.stamps?' on':'')+((i===5||i===10)&&i>S.stamps?' goal':'')+'">'+(i<=S.stamps?'け':(i===5?'味玉':i===10?'麺':i))+'</div>';}
+    botHtml('<div class="card"><div class="ch">けんた 常連さんカード</div><div class="cb"><div class="sm">現在 '+S.stamps+' / 10 ポイント</div><div class="stamps">'+st+'</div><div class="sm">5個で味玉1個無料・10個でらーめん1杯無料</div></div></div>');
+    if(S.flow==='served')S.flow='end';
+    caption('紙のカードと違って、なくしたり忘れたりしません。スタンプはお会計時にQRを読み取るだけです。');
+  }
+  function toast(t){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(e._t);e._t=setTimeout(()=>e.hidden=true,1500);}
+  function caption(t){$('capText').textContent=t;updateHint();}
+  // 次に押すボタンを光らせる
+  function updateHint(){
+    document.querySelectorAll('.hint').forEach(e=>e.classList.remove('hint'));
+    let el=null;
+    if(!$('qr').hidden) el=$('qr').querySelector('button');
+    else if(S.me){
+      const mineCalled=S.called.find(x=>x.mine);
+      if(mineCalled) el=document.querySelector('[data-act="done"][data-no="'+mineCalled.no+'"]');
+      else if(S.called.length) el=document.querySelector('[data-act="done"]');
+      else el=$('callBtn');
+    }
+    else if(S.flow==='start') el=$('rmQueue');
+    else if(S.flow==='served') el=$('rmCard');
+    if(el) el.classList.add('hint');
+  }
+  function flash(id){const e=$(id);if(!e)return;e.classList.remove('pulse');void e.offsetWidth;e.classList.add('pulse');}
+
+  $('rmQueue').onclick=()=>{setQR(null);tapQueue();};
+  $('rmStatus').onclick=()=>{setQR(null);me('今何番目？');statusReply();caption('「今何番目？」はいつでも確認できます。返信なので通数はかかりません。');};
+  $('rmMenu').onclick=()=>{setQR(null);tapMenu();};
+  $('rmCard').onclick=()=>{setQR(null);tapCard();};
+
+  // ---------- 自動再生 ----------
+  function stop(){timers.forEach(clearTimeout);timers=[];playing=false;$('play').textContent='▶ 自動で流す';}
+  function play(){
+    stop(); init(); playing=true; $('play').textContent='■ 停止';
+    const steps=[
+      [600,()=>{flash('rmQueue');$('rmQueue').click();}],
+      [1800,()=>{const b=$('qr').querySelectorAll('button')[1];if(b){flash('qr');b.click();}}],
+      [3000,()=>{flash('callBtn');$('callBtn')&&$('callBtn').click();}],
+      [2200,()=>{const b=document.querySelector('[data-act="done"]');b&&b.click();}],
+      [2400,()=>{flash('callBtn');$('callBtn')&&$('callBtn').click();}],
+      [2200,()=>{const b=document.querySelector('[data-act="done"]');b&&b.click();}],
+      [2400,()=>{flash('rmStatus');$('rmStatus').click();}],
+      [2600,()=>{flash('callBtn');$('callBtn')&&$('callBtn').click();}],
+      [2200,()=>{const b=document.querySelector('[data-act="done"]');b&&b.click();}],
+      [2600,()=>{flash('callBtn');$('callBtn')&&$('callBtn').click();}],
+      [3200,()=>{const b=document.querySelector('[data-act="done"]');b&&b.click();}],
+      [2400,()=>{const b=document.querySelector('[data-act="done"]');b&&b.click();}],
+      [2600,()=>{flash('rmCard');$('rmCard').click();}],
+      [3000,()=>stop()]
+    ];
+    let t=0; steps.forEach(([d,fn])=>{t+=d;timers.push(setTimeout(fn,t));});
+  }
+  $('play').onclick=()=>playing?stop():play();
+  $('reset').onclick=()=>{stop();init();};
+  init();
+})();
+</script>
+</body>
+</html>
